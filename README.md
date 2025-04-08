@@ -1,9 +1,9 @@
 # 🤖 EinsteinBot - Your Friendly AI-Powered Discord Bot
 
-Welcome to EinsteinBot, where artificial intelligence meets Discord shenanigans! This bot harnesses the power of Google's Generative AI to bring intelligent conversations and helpful interactions to your Discord server.
+Welcome to EinsteinBot! This bot harnesses the power of Google's Generative AI to bring intelligent conversations and helpful interactions to your Discord server.
 
 > 🎯 **Looking to use EinsteinBot in your server?**  
-> Check out our [user guide](TEMP_CHANGE_LATER) for instructions on adding and using the hosted version of EinsteinBot!
+> Check out the [user guide](TEMP_CHANGE_LATER) for instructions on adding and using the hosted version of EinsteinBot!
 
 This documentation is for developers who want to build and host their own instance of EinsteinBot or contribute to its development.
 
