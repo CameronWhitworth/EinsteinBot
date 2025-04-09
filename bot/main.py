@@ -3,8 +3,12 @@ from discord import app_commands
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from commands import EinsteinCommand, SummarizeCommand, SyncCommand
+from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand
 from prompt_manager import PromptManager
+from discord.app_commands import Cooldown
+from discord import app_commands
+from typing import Optional
+import datetime
 
 # Load environment variables from .env file
 load_dotenv()
@@ -26,19 +30,35 @@ class EinsteinBot(discord.Client):
         intents.message_content = True
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
+        self.cooldowns = {}
         
         # Initialize commands
         self.einstein_cmd = EinsteinCommand(self, model, prompt_manager)
         self.summarize_cmd = SummarizeCommand(self, model, prompt_manager)
         self.sync_cmd = SyncCommand(self)
+        self.factcheck_cmd = FactCheckCommand(self, model, prompt_manager)
         
         # Register commands
         self.einstein_cmd.register(self.tree)
         self.summarize_cmd.register(self.tree)
         self.sync_cmd.register(self.tree)
+        self.factcheck_cmd.register(self.tree)
 
     async def setup_hook(self):
         await self.tree.sync()
+
+    def check_cooldown(self, user_id: int, command: str, cooldown_seconds: int = 5) -> Optional[float]:
+        """Check if a command is on cooldown for a user."""
+        now = datetime.datetime.now().timestamp()
+        key = f"{user_id}:{command}"
+        
+        if key in self.cooldowns:
+            last_used = self.cooldowns[key]
+            if now - last_used < cooldown_seconds:
+                return cooldown_seconds - (now - last_used)
+        
+        self.cooldowns[key] = now
+        return None
 
 client = EinsteinBot()
 
@@ -50,6 +70,12 @@ async def on_message(message: discord.Message):
 
     # Check if bot is mentioned
     if client.user.mentioned_in(message):
+        # Check cooldown
+        remaining = client.check_cooldown(message.author.id, "mention", 5)
+        if remaining:
+            await message.channel.send(f"Please wait {remaining:.1f} seconds before using this command again.")
+            return
+
         prompt = message.content.replace(f"<@{client.user.id}>", "").strip()
 
         if not prompt:
