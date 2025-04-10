@@ -21,7 +21,7 @@ This documentation is for developers who want to build and host their own instan
 
 ### Prerequisites
 
-- Python 3.0 or higher
+- Python 3.9 or higher
 - A Discord Bot Token
 - Google AI API credentials
 
