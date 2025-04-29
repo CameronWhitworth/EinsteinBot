@@ -3,7 +3,7 @@ from discord import app_commands
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand
+from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand, HelpCommand
 from prompt_manager import PromptManager
 from discord.app_commands import Cooldown
 from discord import app_commands
@@ -37,12 +37,14 @@ class EinsteinBot(discord.Client):
         self.summarize_cmd = SummarizeCommand(self, model, prompt_manager)
         self.sync_cmd = SyncCommand(self)
         self.factcheck_cmd = FactCheckCommand(self, model, prompt_manager)
+        self.help_cmd = HelpCommand(self)
         
         # Register commands
         self.einstein_cmd.register(self.tree)
         self.summarize_cmd.register(self.tree)
         self.sync_cmd.register(self.tree)
         self.factcheck_cmd.register(self.tree)
+        self.help_cmd.register(self.tree)
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -70,13 +72,21 @@ async def on_message(message: discord.Message):
 
     # Check if bot is mentioned
     if client.user.mentioned_in(message):
+        # Ignore @everyone and similar commands
+        if any(mention in message.content.lower() for mention in ['@everyone', '@here', '@role']):
+            return
+
+        # Check if the message contains any role mentions
+        if message.role_mentions:
+            return
+
         # Check cooldown
         remaining = client.check_cooldown(message.author.id, "mention", 5)
         if remaining:
             await message.channel.send(f"Please wait {remaining:.1f} seconds before using this command again.")
             return
 
-        prompt = message.content.replace(f"<@{client.user.id}>", "").strip()
+        prompt = message.content.replace(f"<@{client.user.id}>", "").replace(f"<@!{client.user.id}>", "").strip()
 
         if not prompt:
             await message.channel.send("Please provide a question after mentioning me.")
