@@ -76,10 +76,6 @@ async def on_message(message: discord.Message):
         if any(mention in message.content.lower() for mention in ['@everyone', '@here', '@role']):
             return
 
-        # Check if it's a direct mention (not part of a larger mention)
-        if not message.content.startswith(f'<@{client.user.id}>') and not message.content.startswith(f'<@!{client.user.id}>'):
-            return
-
         # Check if the message contains any role mentions
         if message.role_mentions:
             return
