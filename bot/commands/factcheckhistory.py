@@ -84,7 +84,8 @@ class FactCheckHistoryCommand(BaseCommand):
                 Please provide a comprehensive analysis of the factual accuracy of these messages.
                 Focus on verifiable claims and provide evidence where possible.
                 Be thorough but concise in your analysis.
-                Group similar claims together when possible to avoid repetition."""
+                Group similar claims together when possible to avoid repetition.
+                Try and keep message within 2000 characters. However provide as much context as needed."""
 
                 response = self.model.generate_content(prompt)
                 
