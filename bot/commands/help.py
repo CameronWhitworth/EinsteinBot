@@ -18,6 +18,7 @@ class HelpCommand(BaseCommand):
 • ⏱️ 5-second cooldown between mentions
 • ✅ Fact-checking capabilities
 • 📊 Conversation summarization
+• 🔍 Conversation analysis
 
 **How to Use EinsteinBot:**
 1. Direct Mention: Type `@EinsteinBot` followed by your question
@@ -41,6 +42,13 @@ Fact-check any statement or claim.
 • Provides detailed analysis
 • Indicates if claims are true, false, or unverifiable
 • Example: `/factcheck The Earth is flat`
+
+🔍 **/factcheckhistory [number]**
+Analyze recent conversation for factual accuracy.
+• Reviews the last 50 messages by default
+• Can analyze up to 500 messages
+• Provides a detailed analysis of factual claims
+• Example: `/factcheckhistory 100`
 
 **Important Notes:**
 • I only respond to direct mentions at the start of messages
