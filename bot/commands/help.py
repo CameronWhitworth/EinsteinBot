@@ -21,7 +21,7 @@ class HelpCommand(BaseCommand):
 • 🔍 Conversation analysis
 
 **How to Use EinsteinBot:**
-1. Direct Mention: Type `@EinsteinBot` followed by your question
+1. Direct Mention: Type `@EinsteinAI` followed by your question
 2. Slash Commands: Use `/` followed by the command name
 
 **Available Commands:**
@@ -51,14 +51,15 @@ Analyze recent conversation for factual accuracy.
 • Example: `/factcheckhistory 100`
 
 **Important Notes:**
-• I only respond to direct mentions at the start of messages
+• I respond to direct mentions if used anywhere in the message
 • I ignore @everyone, @here, and role mentions
 • Slash commands are always available
 • Responses may be split into multiple messages if they're long
 
-**Need More Help?**
-Just ask me directly! For example:
-`@EinsteinBot how do I use the factcheck command?`
+⚠️ **Important Warning:** 
+While I aim to provide accurate information, I'm an AI and can sometimes make mistakes.
+I currently do not have access to the internet, so I cannot access the latest information.
+Always verify critical information from reliable sources.
 
 Happy learning! 🎓"""
 

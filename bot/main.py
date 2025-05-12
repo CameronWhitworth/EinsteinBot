@@ -121,4 +121,17 @@ async def on_message(message: discord.Message):
         except Exception as e:
             await message.reply(f"Error: {str(e)}")
 
+@client.event
+async def on_guild_join(guild):
+    # Find the first available text channel to send the welcome message
+    for channel in guild.text_channels:
+        if channel.permissions_for(guild.me).send_messages:
+            await channel.send(f"👋 Hello! I'm Einstein! I'm here to help with various tasks including:\n"
+                             f"• Answering questions (just mention me)\n"
+                             f"• Summarizing text\n"
+                             f"• Fact checking\n"
+                             f"• And more!\n\n"
+                             f"Use `/help` to see all available commands!")
+            break
+
 client.run(DISCORD_TOKEN)
