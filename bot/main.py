@@ -3,7 +3,7 @@ from discord import app_commands
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand, HelpCommand
+from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand, FactCheckHistoryCommand, HelpCommand
 from prompt_manager import PromptManager
 from discord.app_commands import Cooldown
 from discord import app_commands
@@ -37,6 +37,7 @@ class EinsteinBot(discord.Client):
         self.summarize_cmd = SummarizeCommand(self, model, prompt_manager)
         self.sync_cmd = SyncCommand(self)
         self.factcheck_cmd = FactCheckCommand(self, model, prompt_manager)
+        self.factcheckhistory_cmd = FactCheckHistoryCommand(self, model, prompt_manager)
         self.help_cmd = HelpCommand(self)
         
         # Register commands
@@ -44,6 +45,7 @@ class EinsteinBot(discord.Client):
         self.summarize_cmd.register(self.tree)
         self.sync_cmd.register(self.tree)
         self.factcheck_cmd.register(self.tree)
+        self.factcheckhistory_cmd.register(self.tree)
         self.help_cmd.register(self.tree)
 
     async def setup_hook(self):
@@ -61,6 +63,23 @@ class EinsteinBot(discord.Client):
         
         self.cooldowns[key] = now
         return None
+
+    async def get_reply_thread_context(self, message, max_messages=50, max_chars=2000):
+        context_messages = []
+        total_chars = 0
+        current = message
+        for _ in range(max_messages):
+            if not current.reference or not current.reference.message_id:
+                break
+            parent = await current.channel.fetch_message(current.reference.message_id)
+            content = parent.content
+            author = parent.author.display_name if hasattr(parent.author, 'display_name') else parent.author.name
+            if total_chars + len(content) > max_chars:
+                break
+            context_messages.append((author, content))
+            total_chars += len(content)
+            current = parent
+        return list(reversed(context_messages))
 
 client = EinsteinBot()
 
@@ -83,26 +102,23 @@ async def on_message(message: discord.Message):
         # Check cooldown
         remaining = client.check_cooldown(message.author.id, "mention", 5)
         if remaining:
-            await message.channel.send(f"Please wait {remaining:.1f} seconds before using this command again.")
+            await message.reply(f"Please wait {remaining:.1f} seconds before using this command again.")
             return
 
         prompt = message.content.replace(f"<@{client.user.id}>", "").replace(f"<@!{client.user.id}>", "").strip()
 
         if not prompt:
-            await message.channel.send("Please provide a question after mentioning me.")
+            await message.reply("Please provide a question after mentioning me.")
             return
 
         try:
             await message.channel.typing()
-            # Check if the message is a reply to another message
-            context = ""
-            if message.reference and message.reference.resolved:
-                context = message.reference.resolved.content
-
-            replies = client.einstein_cmd.generate_response(prompt, context)
+            # Gather reply thread context as a list of (author, content)
+            thread_context = await client.get_reply_thread_context(message, max_messages=50, max_chars=2000)
+            replies = client.einstein_cmd.generate_response(prompt, thread_context)
             for reply in replies:
-                await message.channel.send(reply)
+                await message.reply(reply)
         except Exception as e:
-            await message.channel.send(f"Error: {str(e)}")
+            await message.reply(f"Error: {str(e)}")
 
 client.run(DISCORD_TOKEN)

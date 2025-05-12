@@ -8,13 +8,11 @@ class EinsteinCommand(BaseCommand):
         self.model = model
         self.prompt_manager = prompt_manager
 
-    def generate_response(self, prompt: str, context: str = "") -> list[str]:
+    def generate_response(self, prompt: str, previous_messages=None) -> list[str]:
         # Use prompt manager to wrap the question
-        wrapped_prompt = self.prompt_manager.wrap_question(prompt, context)
-        
+        wrapped_prompt = self.prompt_manager.wrap_question(prompt, previous_messages)
         response = self.model.generate_content(wrapped_prompt)
         text = response.text
-
         MAX_LEN = 2000
         return [text[i:i+MAX_LEN] for i in range(0, len(text), MAX_LEN)]
 

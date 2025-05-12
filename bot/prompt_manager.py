@@ -5,13 +5,16 @@ class PromptManager:
             "Keep responses concise, clear, and under 4000 characters. "
         )
 
-    def wrap_question(self, prompt: str, context: str = "") -> str:
-        """Wrap a question with the bot's personality."""
-        if context:
+    def wrap_question(self, prompt: str, previous_messages=None) -> str:
+        """Wrap a question with the bot's personality and optionally a thread context."""
+        if previous_messages and isinstance(previous_messages, list) and len(previous_messages) > 0:
+            thread = "Previous messages in this thread (oldest to newest):\n"
+            for author, content in previous_messages:
+                thread += f"[{author}]: {content}\n"
             return (
                 f"{self.base_personality}\n\n"
-                f"Someone said: {context}\n"
-                f"Question about this: {prompt}"
+                f"{thread}\n"
+                f"Question about this thread: {prompt}"
             )
         return f"{self.base_personality}\n\nQuestion: {prompt}"
 
