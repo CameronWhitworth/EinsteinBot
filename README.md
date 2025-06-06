@@ -27,7 +27,7 @@ This documentation is for developers who want to build and host their own instan
 
 ### Installation
 
-1. Clone this repository:
+1. Fork then clone this repository:
 ```bash
 git clone https://github.com/yourusername/EinsteinBot.git
 cd EinsteinBot
