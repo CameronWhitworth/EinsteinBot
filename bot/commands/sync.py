@@ -13,6 +13,6 @@ class SyncCommand(BaseCommand):
             await interaction.response.defer(ephemeral=True)
             try:
                 await self.client.tree.sync()
-                await interaction.followup.send('Commands synced successfully!', ephemeral=True)
+                await interaction.followup.send('✅ Commands synced successfully!', ephemeral=True)
             except Exception as e:
-                await interaction.followup.send(f'Failed to sync commands: {str(e)}', ephemeral=True) 
+                await interaction.followup.send(f'❌ Failed to sync commands: {str(e)}', ephemeral=True) 

@@ -4,7 +4,9 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand, FactCheckHistoryCommand, HelpCommand
+from commands.automod import AutoModCommand
 from prompt_manager import PromptManager
+from automod import AutoMod
 from discord.app_commands import Cooldown
 from discord import app_commands
 from typing import Optional
@@ -23,6 +25,9 @@ model = genai.GenerativeModel(model_name="gemini-2.0-flash")
 # Initialize prompt manager
 prompt_manager = PromptManager()
 
+# Initialize auto-moderation
+automod = AutoMod()
+
 class EinsteinBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
@@ -39,6 +44,7 @@ class EinsteinBot(discord.Client):
         self.factcheck_cmd = FactCheckCommand(self, model, prompt_manager)
         self.factcheckhistory_cmd = FactCheckHistoryCommand(self, model, prompt_manager)
         self.help_cmd = HelpCommand(self)
+        self.automod_cmd = AutoModCommand(self, automod)
         
         # Register commands
         self.einstein_cmd.register(self.tree)
@@ -47,6 +53,7 @@ class EinsteinBot(discord.Client):
         self.factcheck_cmd.register(self.tree)
         self.factcheckhistory_cmd.register(self.tree)
         self.help_cmd.register(self.tree)
+        self.automod_cmd.register(self.tree)
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -88,6 +95,33 @@ async def on_message(message: discord.Message):
     # Ignore messages from the bot itself
     if message.author == client.user:
         return
+    
+    # Auto-moderation: Check for banned words
+    # Skip checking DMs and private channels
+    if isinstance(message.channel, (discord.TextChannel, discord.Thread)) and message.guild:
+        # Check if bot has permission to manage messages
+        if message.channel.permissions_for(message.guild.me).manage_messages:
+            banned_words_found = automod.check_message(message.content)
+            if banned_words_found:
+                try:
+                    # Delete the original message
+                    await message.delete()
+                    
+                    # Send first message: warning that mentions the user
+                    warning_message = f"⚠️ {message.author.mention}, your message was removed because it contained banned word(s)."
+                    warning_msg = await message.channel.send(warning_message)
+                    
+                    # Send second message: filtered version of the original message (permanent)
+                    filtered_content = automod.filter_message(message.content)
+                    filtered_msg = await message.channel.send(
+                        f"**{message.author.display_name}:** {filtered_content}"
+                    )
+                except discord.Forbidden:
+                    # Bot doesn't have permission to delete messages
+                    pass
+                except Exception as e:
+                    print(f"Error in auto-moderation: {e}")
+                return  # Don't process the message further
 
     # Check if bot is mentioned
     if client.user.mentioned_in(message):
