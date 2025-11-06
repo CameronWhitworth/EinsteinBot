@@ -4,5 +4,6 @@ from .sync import SyncCommand
 from .factcheck import FactCheckCommand
 from .factcheckhistory import FactCheckHistoryCommand
 from .help import HelpCommand
+from .automod import AutoModCommand
 
-__all__ = ['EinsteinCommand', 'SummarizeCommand', 'SyncCommand', 'FactCheckCommand', 'FactCheckHistoryCommand', 'HelpCommand'] 
+__all__ = ['EinsteinCommand', 'SummarizeCommand', 'SyncCommand', 'FactCheckCommand', 'FactCheckHistoryCommand', 'HelpCommand', 'AutoModCommand'] 

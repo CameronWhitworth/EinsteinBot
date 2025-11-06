@@ -4,7 +4,9 @@ import google.generativeai as genai
 import os
 from dotenv import load_dotenv
 from commands import EinsteinCommand, SummarizeCommand, SyncCommand, FactCheckCommand, FactCheckHistoryCommand, HelpCommand
+from commands.automod import AutoModCommand
 from prompt_manager import PromptManager
+from automod import AutoMod
 from discord.app_commands import Cooldown
 from discord import app_commands
 from typing import Optional
@@ -23,6 +25,9 @@ model = genai.GenerativeModel(model_name="gemini-2.0-flash")
 # Initialize prompt manager
 prompt_manager = PromptManager()
 
+# Initialize auto-moderation
+automod = AutoMod()
+
 class EinsteinBot(discord.Client):
     def __init__(self):
         intents = discord.Intents.default()
@@ -31,6 +36,7 @@ class EinsteinBot(discord.Client):
         super().__init__(intents=intents)
         self.tree = app_commands.CommandTree(self)
         self.cooldowns = {}
+        self.webhook_cache = {}  # Cache webhooks per channel
         
         # Initialize commands
         self.einstein_cmd = EinsteinCommand(self, model, prompt_manager)
@@ -39,6 +45,7 @@ class EinsteinBot(discord.Client):
         self.factcheck_cmd = FactCheckCommand(self, model, prompt_manager)
         self.factcheckhistory_cmd = FactCheckHistoryCommand(self, model, prompt_manager)
         self.help_cmd = HelpCommand(self)
+        self.automod_cmd = AutoModCommand(self, automod)
         
         # Register commands
         self.einstein_cmd.register(self.tree)
@@ -47,6 +54,7 @@ class EinsteinBot(discord.Client):
         self.factcheck_cmd.register(self.tree)
         self.factcheckhistory_cmd.register(self.tree)
         self.help_cmd.register(self.tree)
+        self.automod_cmd.register(self.tree)
 
     async def setup_hook(self):
         await self.tree.sync()
@@ -88,6 +96,61 @@ async def on_message(message: discord.Message):
     # Ignore messages from the bot itself
     if message.author == client.user:
         return
+    
+    # Auto-moderation: Check for banned words
+    # Skip checking DMs and private channels
+    if isinstance(message.channel, (discord.TextChannel, discord.Thread)) and message.guild:
+        # Check if bot has permission to manage messages
+        if message.channel.permissions_for(message.guild.me).manage_messages:
+            banned_words_found = automod.check_message(message.content)
+            if banned_words_found:
+                try:
+                    # Delete the original message
+                    await message.delete()
+                    
+                    # Send warning in red embed box
+                    keywords_text = ", ".join(f"`{word}`" for word in banned_words_found)
+                    warning_embed = discord.Embed(
+                        title="⚠️ Message Flagged",
+                        description=f"Message removed because it contained banned word(s): {keywords_text}.",
+                        color=0xff6b6b  # Red warning color
+                    )
+                    await message.channel.send(embed=warning_embed)
+                    
+                    # Send filtered message using webhook to show user's avatar and name
+                    filtered_content = automod.filter_message(message.content)
+                    
+                    # Get or create webhook for this channel
+                    channel_id = message.channel.id
+                    if channel_id not in client.webhook_cache:
+                        # Try to find existing webhook first
+                        webhooks = await message.channel.webhooks()
+                        webhook = None
+                        for wh in webhooks:
+                            if wh.user == client.user:
+                                webhook = wh
+                                break
+                        
+                        # Create new webhook if none found
+                        if not webhook:
+                            webhook = await message.channel.create_webhook(name="AutoMod Filter")
+                        
+                        client.webhook_cache[channel_id] = webhook
+                    else:
+                        webhook = client.webhook_cache[channel_id]
+                    
+                    # Send message via webhook with user's avatar and name
+                    await webhook.send(
+                        content=filtered_content,
+                        username=message.author.display_name,
+                        avatar_url=message.author.display_avatar.url
+                    )
+                except discord.Forbidden:
+                    # Bot doesn't have permission to delete messages
+                    pass
+                except Exception as e:
+                    print(f"Error in auto-moderation: {e}")
+                return  # Don't process the message further
 
     # Check if bot is mentioned
     if client.user.mentioned_in(message):
