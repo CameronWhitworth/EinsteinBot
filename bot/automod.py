@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from typing import List, Set
 
 class AutoMod:
@@ -8,7 +9,16 @@ class AutoMod:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         self.ban_list_file = os.path.join(script_dir, "banned_words.json")
         self.banned_words: Set[str] = self.load_ban_list()
+
+        self.url_pattern = re.compile(
+            r'https?://\S+|www\.\S+',
+            re.IGNORECASE
+        )
     
+    def _remove_urls(self, text: str) -> str:
+        """Remove URLs from text before moderation checks."""
+        return self.url_pattern.sub("", text)    
+
     def load_ban_list(self) -> Set[str]:
         """Load banned words from JSON file."""
         if os.path.exists(self.ban_list_file):
@@ -53,18 +63,21 @@ class AutoMod:
     
     def check_message(self, message_content: str) -> List[str]:
         """
-        Check if message contains any banned words.
-        Returns list of banned words found (empty if none found).
+        Check if message contains any banned words as whole words,
+        ignoring anything inside URLs.
         """
-        message_lower = message_content.lower()
+        content = self._remove_urls(message_content)
+
         found_words = []
-        
+
         for banned_word in self.banned_words:
-            if banned_word in message_lower:
+            pattern = rf'\b{re.escape(banned_word)}\b'
+
+            if re.search(pattern, content, re.IGNORECASE):
                 found_words.append(banned_word)
-        
+
         return found_words
-    
+        
     def filter_message(self, message_content: str) -> str:
         """
         Filter banned words in a message, keeping first and last letter visible,
@@ -72,40 +85,33 @@ class AutoMod:
         Example: "stock" -> "s###k"
         """
         filtered_content = message_content
-        message_lower = message_content.lower()
-        
-        # Find all occurrences of banned words and store their positions
-        # Process from end to beginning to preserve indices
-        replacements = []
-        
+
         for banned_word in self.banned_words:
-            start_idx = 0
-            while True:
-                idx = message_lower.find(banned_word, start_idx)
-                if idx == -1:
-                    break
-                
-                # Get the actual word from the original message (preserving case)
-                actual_word = message_content[idx:idx + len(banned_word)]
-                
-                # Filter the word: keep first and last letter, replace middle with #
+            pattern = rf'\b{re.escape(banned_word)}\b'
+
+            def replace(match):
+                actual_word = match.group(0)
+
                 if len(actual_word) <= 1:
-                    filtered_word = "#"
+                    return "#"
                 elif len(actual_word) == 2:
-                    filtered_word = actual_word[0] + "#"
+                    return actual_word[0] + "#"
                 else:
-                    # Keep first letter, replace middle with #, keep last letter
-                    filtered_word = actual_word[0] + "#" * (len(actual_word) - 2) + actual_word[-1]
-                
-                replacements.append((idx, len(actual_word), filtered_word))
-                start_idx = idx + 1
-        
-        # Sort by index in reverse order to replace from end to beginning
-        replacements.sort(key=lambda x: x[0], reverse=True)
-        
-        # Apply replacements
-        for idx, length, replacement in replacements:
-            filtered_content = filtered_content[:idx] + replacement + filtered_content[idx + length:]
-        
+                    return (
+                        actual_word[0]
+                        + "#" * (len(actual_word) - 2)
+                        + actual_word[-1]
+                    )
+
+            filtered_content = re.sub(
+                pattern,
+                replace,
+                filtered_content,
+                flags=re.IGNORECASE
+            )
+
         return filtered_content
 
+def _remove_urls(self, text: str) -> str:
+    """Remove URLs from text before moderation checks."""
+    return self.url_pattern.sub("", text)
